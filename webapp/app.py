@@ -4,8 +4,8 @@ from urllib.parse import urlparse, urlunparse, unquote
 
 # Third-party
 import flask
-from canonicalwebteam.discourse_docs import DiscourseDocs, DiscourseAPI
-from canonicalwebteam.discourse_docs.models import NavigationParseError
+from canonicalwebteam.discourse_docs import DiscourseAPI, DiscourseDocs
+from canonicalwebteam.discourse_docs.parsers import parse_index
 from canonicalwebteam.yaml_responses.flask_helpers import (
     prepare_deleted,
     prepare_redirects,
@@ -30,30 +30,29 @@ app.template_folder = "../templates"
 app.static_folder = "../static"
 app.url_map.strict_slashes = False
 
-discourse_api = DiscourseAPI(
-    base_url="https://forum.snapcraft.io/",
-    frontpage_id=3781,  # The "Snap Documentation" topic
-    category_id=15,  # The "doc" category
-)
-DiscourseDocs().init_app(
-    app=app,
-    model=discourse_api,
+discourse_index_id = 3781
+
+discourse_api = DiscourseAPI(base_url="https://forum.snapcraft.io/")
+discourse_docs = DiscourseDocs(
+    api=discourse_api,
+    index_topic_id=discourse_index_id,
+    category_id=15,
     url_prefix="/",
     document_template="document.html",
 )
+discourse_docs.init_app(app=app)
 
 # Parse redirects.yaml and permanent-redirects.yaml
 app.before_request(prepare_redirects())
 
 
 def deleted_callback(context):
-    try:
-        frontpage, nav_html = discourse_api.parse_frontpage()
-    except NavigationParseError as nav_error:
-        nav_html = f"<p>{str(nav_error)}</p>"
+    index = parse_index(discourse_api.get_topic(discourse_index_id))
 
     return (
-        flask.render_template("410.html", nav_html=nav_html, **context),
+        flask.render_template(
+            "410.html", navigation=index["navigation"], **context
+        ),
         410,
     )
 
@@ -63,12 +62,14 @@ app.before_request(prepare_deleted(view_callback=deleted_callback))
 
 @app.errorhandler(404)
 def page_not_found(e):
-    try:
-        frontpage, nav_html = discourse_api.parse_frontpage()
-    except NavigationParseError as nav_error:
-        nav_html = f"<p>{str(nav_error)}</p>"
+    index = parse_index(discourse_api.get_topic(discourse_index_id))
 
-    return flask.render_template("404.html", nav_html=nav_html), 404
+    return (
+        flask.render_template(
+            "404.html", navigation=index["navigation"]
+        ),
+        404,
+    )
 
 
 @app.errorhandler(410)
