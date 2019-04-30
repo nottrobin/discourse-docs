@@ -37,10 +37,9 @@ discourse_docs = DiscourseDocs(
     api=discourse_api,
     index_topic_id=discourse_index_id,
     category_id=15,
-    url_prefix="/",
     document_template="document.html",
 )
-discourse_docs.init_app(app=app)
+discourse_docs.init_app(app, url_prefix="/")
 
 # Parse redirects.yaml and permanent-redirects.yaml
 app.before_request(prepare_redirects())
