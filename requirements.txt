@@ -1,7 +1,7 @@
 # App dependencies
 talisker[gunicorn]==0.14.3
 Flask==1.0.2
--e ../canonicalwebteam.discourse-docs
+git+git://github.com/nottrobin/canonicalwebteam.discourse-docs@restructure#egg=canonicalwebteam.discourse-docs
 canonicalwebteam.http==0.1.6
 canonicalwebteam.yaml_responses[flask]==1.1.0
 requests-mock==1.5.2
